@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+  <meta charset="UTF-8">
+  <title>Generator stopki mailowej</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      padding: 2em;
+    }
+    label {
+      display: block;
+      margin-top: 1em;
+    }
+    input, textarea {
+      width: 100%;
+      padding: 0.5em;
+      margin-top: 0.3em;
+    }
+    #signature-preview {
+      margin-top: 2em;
+      padding: 1em;
+      border: 1px solid #ccc;
+      background-color: #f9f9f9;
+    }
+  </style>
+</head>
+<body>
+  <h1>Generator stopki mailowej</h1>
+  <form id="signature-form">
+    <label>Imię i nazwisko: <input type="text" id="fullname" required></label>
+    <label>Stanowisko: <input type="text" id="position"></label>
+    <label>E-mail: <input type="email" id="email"></label>
+    <label>Telefon: <input type="text" id="phone"></label>
+
+    <label>Wgraj logo:
+      <input type="file" id="logoUpload" accept="image/*">
+    </label>
+    <label>Logo Base64 (automatycznie uzupełniane):
+      <textarea id="logo" rows="4" placeholder="Base64 pojawi się automatycznie..." readonly></textarea>
+    </label>
+
+    <button type="submit">Generuj stopkę</button>
+  </form>
+
+  <div id="signature-preview"></div>
+
+  <script>
+    const form = document.getElementById('signature-form');
+    const preview = document.getElementById('signature-preview');
+
+    form.addEventListener('submit', function (e) {
+      e.preventDefault();
+
+      const fullname = document.getElementById('fullname').value;
+      const position = document.getElementById('position').value;
+      const email = document.getElementById('email').value;
+      const phone = document.getElementById('phone').value;
+      const logo = document.getElementById('logo').value;
+
+      const html = `
+        <table style="font-family: Arial, sans-serif; font-size: 10pt;">
+          <tr>
+            <td rowspan="6" style="padding-right: 15px; vertical-align: top;">
+              <img src="${logo}" alt="Logo" style="max-height: 120px; height: auto; display: block;" />
+            </td>
+            <td style="font-weight: bold; font-size: 12pt; color: #004080;">${fullname}</td>
+          </tr>
+          <tr>
+            <td style="color: #004080; text-transform: uppercase;">${position}</td>
+          </tr>
+          <tr>
+            <td><span style="color:#0073e6">m:</span> <a href="mailto:${email}" style="color:#0073e6; text-decoration:none;">${email}</a></td>
+          </tr>
+          <tr>
+            <td><span style="color:#0073e6">p.:</span> <a href="tel:${phone}" style="color:#0073e6; text-decoration:none;">${phone}</a></td>
+          </tr>
+          <tr><td style="padding-top: 10px; color: #666;">X-TECH | ul. Grunwaldzka 46 | 41-819 Zabrze</td></tr>
+          <tr><td style="color: #666;">NIP: 6481929533 | REGON: 240059467</td></tr>
+        </table>
+      `;
+
+      preview.innerHTML = '<h2>Wygenerowana stopka:</h2>' + html;
+    });
+
+    // Obsługa wczytywania logo do pola textarea
+    const logoUpload = document.getElementById('logoUpload');
+    logoUpload.addEventListener('change', function () {
+      const file = this.files[0];
+      if (!file) return;
+
+      const reader = new FileReader();
+      reader.onload = function (e) {
+        document.getElementById('logo').value = e.target.result;
+      };
+      reader.readAsDataURL(file);
+    });
+  </script>
+</body>
+</html>
