@@ -1,0 +1,286 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+  <meta charset="UTF-8" />
+  <title>Generator stopki mailowej</title>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/color-thief/2.3.2/color-thief.umd.js"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600&display=swap" rel="stylesheet">
+  <style>
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      padding: 0;
+      font-family: 'Inter', sans-serif;
+      background: linear-gradient(135deg, #e0c3fc 0%, #8ec5fc 100%);
+      min-height: 100vh;
+      display: flex;
+      justify-content: center;
+      align-items: flex-start;
+      padding: 3em 1em;
+    }
+    .container {
+      background: white;
+      max-width: 800px;
+      width: 100%;
+      padding: 2em 2.5em;
+      border-radius: 16px;
+      box-shadow: 0 10px 25px rgba(0,0,0,0.1);
+    }
+    h1 { text-align: center; color: #333; margin-bottom: 1.5em; }
+    label { display: block; margin-top: 1.2em; font-weight: 500; color: #333; }
+    input, textarea {
+      width: 100%;
+      padding: 0.75em 1em;
+      border: 1px solid #ccc;
+      border-radius: 8px;
+      margin-top: 0.5em;
+      font-size: 1em;
+      transition: border-color 0.3s;
+    }
+    input:focus, textarea:focus {
+      border-color: #8ec5fc;
+      outline: none;
+    }
+    button {
+      margin-top: 2em;
+      padding: 0.8em 1.5em;
+      background: linear-gradient(135deg, #8ec5fc, #e0c3fc);
+      border: none;
+      border-radius: 8px;
+      color: #fff;
+      font-size: 1em;
+      font-weight: 600;
+      cursor: pointer;
+      transition: transform 0.2s, box-shadow 0.2s;
+    }
+    button:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+    }
+    #extra-actions {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 1em;
+    }
+    #extra-actions button {
+      flex: 1;
+      min-width: 150px;
+    }
+    #signature-preview {
+      margin-top: 2em;
+      padding: 1em;
+      border-radius: 12px;
+      background: #f9f9f9;
+      border: 1px solid #ddd;
+      overflow-x: auto;
+    }
+    h3 { margin-top: 2em; color: #555; }
+    .checkbox-wrapper {
+      margin-top: 1em;
+      text-align: left;
+    }
+    .checkbox-wrapper label {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.5em;
+      white-space: nowrap;
+      font-weight: 500;
+    }
+    #branch-fields { margin-top: 1em; }
+  </style>
+</head>
+<body>
+<div class="container">
+  <h1>Generator stopki mailowej</h1>
+  <form id="signature-form">
+    <label>Imię i nazwisko: <input type="text" id="fullname" required></label>
+    <label>Stanowisko: <input type="text" id="position"></label>
+    <label>E-mail: <input type="email" id="email"></label>
+    <label>Telefon: <input type="text" id="phone"></label>
+    <h3>Dane firmy:</h3>
+    <label>Nazwa firmy: <input type="text" id="companyName"></label>
+    <label>Adres firmy: <input type="text" id="companyAddress"></label>
+    <label>NIP: <input type="text" id="companyNIP"></label>
+    <label>REGON: <input type="text" id="companyREGON"></label>
+    <label>KRS: <input type="text" id="companyKRS"></label>
+    <label>Strona internetowa: <input type="text" id="companyWebsite"></label>
+    <h3>Dane oddziału:</h3>
+    <div class="checkbox-wrapper">
+      <label><span>Firma posiada oddział</span> <input type="checkbox" id="hasBranch" /></label>
+    </div>
+    <div id="branch-fields" style="display: none;">
+      <label>Nazwa i adres oddziału: <input type="text" id="branchAddress"></label>
+      <label>Telefon oddziału: <input type="text" id="branchPhone"></label>
+    </div>
+    <label>Wgraj logo: <input type="file" id="logoUpload" accept="image/*"></label>
+    <label>Logo Base64 (automatycznie uzupełniane): <textarea id="logo" rows="4" readonly></textarea></label>
+    <h3>Kolorystyka stopki:</h3>
+    <div class="checkbox-wrapper">
+      <label><input type="radio" name="colorMode" value="auto" checked> Automatyczne pobranie koloru z logo</label>
+      <label><input type="radio" name="colorMode" value="manual"> Wpisz kolor ręcznie (HEX)</label>
+      <label><input type="radio" name="colorMode" value="picker"> Wybierz kolor z palety</label>
+    </div>
+    <div id="manual-color-wrapper" style="display: none;">
+      <label>Kolor HEX: <input type="text" id="manualColor" placeholder="#000000" /></label>
+    </div>
+    <div id="picker-color-wrapper" style="display: none;">
+      <label>Wybierz kolor: <input type="color" id="pickerColor" value="#004080" /></label>
+    </div>
+    <button type="submit">🚀 Generuj stopkę</button>
+  </form>
+  <div id="signature-preview"></div>
+  <div id="extra-actions" style="display:none; margin-top:2em;">
+    <button id="copy-button">📋 Skopiuj HTML</button>
+    <button id="html-only-button">📄 Skopiuj tylko kod</button>
+    <button id="download-button">💾 Pobierz jako HTML</button>
+  </div>
+  <img id="hidden-logo-preview" style="display: none;" crossorigin="anonymous">
+</div>
+
+<script>
+  const form = document.getElementById('signature-form');
+  const preview = document.getElementById('signature-preview');
+  const copyBtn = document.getElementById('copy-button');
+  const htmlOnlyBtn = document.getElementById('html-only-button');
+  const downloadBtn = document.getElementById('download-button');
+  const extraActions = document.getElementById('extra-actions');
+  const branchCheckbox = document.getElementById('hasBranch');
+  const branchFields = document.getElementById('branch-fields');
+  const logoPreviewImg = document.getElementById('hidden-logo-preview');
+  const colorThief = new ColorThief();
+
+  let extractedColor = [0, 64, 128];
+  let extractedColorRGB = 'rgb(0, 64, 128)';
+  let lighterColor = 'rgb(100, 130, 170)';
+
+  function getLighterColor(rgbArray, percent = 0.5) {
+    return `rgb(${rgbArray.map(v => Math.round(v + (255 - v) * percent)).join(",")})`;
+  }
+
+  function hexToRgb(hex) {
+    const bigint = parseInt(hex, 16);
+    return [(bigint >> 16) & 255, (bigint >> 8) & 255, bigint & 255];
+  }
+
+  branchCheckbox.addEventListener('change', () => {
+    branchFields.style.display = branchCheckbox.checked ? 'block' : 'none';
+  });
+
+  document.getElementById('logoUpload').addEventListener('change', function () {
+    const file = this.files[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = function (e) {
+      const dataURL = e.target.result;
+      document.getElementById('logo').value = dataURL;
+      logoPreviewImg.src = dataURL;
+    };
+    reader.readAsDataURL(file);
+  });
+
+  logoPreviewImg.addEventListener('load', function () {
+    try {
+      extractedColor = colorThief.getColor(logoPreviewImg);
+      extractedColorRGB = `rgb(${extractedColor[0]}, ${extractedColor[1]}, ${extractedColor[2]})`;
+      lighterColor = getLighterColor(extractedColor, 0.1);
+    } catch (err) {
+      console.warn('Nie udało się wyciągnąć koloru z logo:', err);
+    }
+  });
+
+  document.querySelectorAll('input[name="colorMode"]').forEach(radio => {
+    radio.addEventListener('change', () => {
+      const mode = document.querySelector('input[name="colorMode"]:checked').value;
+      document.getElementById('manual-color-wrapper').style.display = mode === 'manual' ? 'block' : 'none';
+      document.getElementById('picker-color-wrapper').style.display = mode === 'picker' ? 'block' : 'none';
+    });
+  });
+
+  let currentSignatureHTML = '';
+  form.addEventListener('submit', function (e) {
+    e.preventDefault();
+
+    const fullname = document.getElementById('fullname').value;
+    const position = document.getElementById('position').value;
+    const email = document.getElementById('email').value;
+    const phone = document.getElementById('phone').value;
+    const logo = document.getElementById('logo').value;
+    const companyName = document.getElementById('companyName').value;
+    const companyAddress = document.getElementById('companyAddress').value;
+    const companyNIP = document.getElementById('companyNIP').value;
+    const companyREGON = document.getElementById('companyREGON').value;
+    const companyKRS = document.getElementById('companyKRS').value;
+    const companyWebsite = document.getElementById('companyWebsite').value;
+    const hasBranch = branchCheckbox.checked;
+    const branchAddress = hasBranch ? document.getElementById('branchAddress').value : '';
+    const branchPhone = hasBranch ? document.getElementById('branchPhone').value : '';
+    const colorMode = document.querySelector('input[name="colorMode"]:checked').value;
+
+    if (colorMode === 'manual') {
+      const hex = document.getElementById('manualColor').value.trim();
+      if (/^#?[0-9A-Fa-f]{6}$/.test(hex)) {
+        const clean = hex.replace('#', '');
+        const rgb = hexToRgb(clean);
+        extractedColorRGB = `rgb(${rgb.join(',')})`;
+        lighterColor = getLighterColor(rgb, 0.4);
+      }
+    } else if (colorMode === 'picker') {
+      const hex = document.getElementById('pickerColor').value;
+      const rgb = hexToRgb(hex.replace('#', ''));
+      extractedColorRGB = `rgb(${rgb.join(',')})`;
+      lighterColor = getLighterColor(rgb, 0.4);
+    }
+
+    const companyInfoLine = `NIP: ${companyNIP} | REGON: ${companyREGON}${companyKRS ? ` | KRS: ${companyKRS}` : ''}`;
+    const websiteLine = companyWebsite
+  ? `<br><br><strong><a href="${companyWebsite}" target="_blank" style="color: ${extractedColorRGB}; text-decoration: none;">${companyWebsite}</a></strong>`
+  : '';
+    const companyBlock = `<div style="color: #666; font-size: 10pt;">${companyName} | ${companyAddress}<br>${companyInfoLine}${hasBranch ? `<br><strong>${branchAddress}</strong><br><strong>Tel: ${branchPhone}</strong>` : ''}${websiteLine}</div>`;
+
+    const html = `
+      <div style="display: flex; align-items: stretch; gap: 15px; font-family: Arial, sans-serif; font-size: 10pt;">
+        <div style="flex: 0 0 auto; display: flex; flex-direction: column;">
+          <img src="${logo}" alt="Logo"
+     style="max-height: 150px; max-width: 150px; height: auto; width: auto; object-fit: contain; align-self: flex-start;" />
+
+        </div>
+        <div style="flex: 1; display: flex; flex-direction: column; justify-content: space-between;">
+          <div>
+            <div style="font-weight: bold; font-size: 12pt; color: ${extractedColorRGB};">${fullname}</div>
+            <div style="color: ${extractedColorRGB}; text-transform: uppercase;">${position}</div>
+            <div><span style="color:${lighterColor}">m:</span> <a href="mailto:${email}" style="color:${lighterColor}; text-decoration:none;">${email}</a></div>
+            <div><span style="color:${lighterColor}">p.:</span> <a href="tel:${phone}" style="color:${lighterColor}; text-decoration:none;">${phone}</a></div>
+          </div>
+          <div style="padding-top: 10px;">${companyBlock}</div>
+        </div>
+      </div>`;
+
+    currentSignatureHTML = html;
+    preview.innerHTML = '<h2>Wygenerowana stopka:</h2>' + html;
+    extraActions.style.display = 'flex';
+  });
+
+  copyBtn.addEventListener('click', () => {
+    navigator.clipboard.writeText(`<html><body>${currentSignatureHTML}</body></html>`).then(() => {
+      alert('Skopiowano całą stronę HTML do schowka!');
+    });
+  });
+
+  htmlOnlyBtn.addEventListener('click', () => {
+    navigator.clipboard.writeText(currentSignatureHTML).then(() => {
+      alert('Skopiowano tylko kod stopki!');
+    });
+  });
+
+  downloadBtn.addEventListener('click', () => {
+    const blob = new Blob([`<html><body>${currentSignatureHTML}</body></html>`], { type: 'text/html' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'stopka.html';
+    a.click();
+    URL.revokeObjectURL(url);
+  });
+</script>
+</body>
+</html>
